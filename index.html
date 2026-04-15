@@ -313,8 +313,19 @@ setInterval(()=>{
 window.addEventListener("beforeunload",e=>{
   if(testState==="running"){lsSet({status:"started",nombre:userData.nombre,apellido:userData.apellido});const m="Si sal\u00eds, el test quedar\u00e1 como interrumpido.";e.returnValue=m;return m;}
 });
-let visWarn=0;
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&testState==="running"&&++visWarn>=3)finishTest(true);});
+/* Seguridad: cualquier salida de pestaña/minimizar termina el test inmediatamente */
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden && testState==="running"){
+    finishTest(true);
+  }
+});
+
+/* Seguridad: perder el foco de la ventana (alt+tab, click fuera) también termina el test */
+window.addEventListener("blur",()=>{
+  if(testState==="running"){
+    finishTest(true);
+  }
+});
 function lsGet(){try{return JSON.parse(localStorage.getItem(LS_KEY))||null;}catch(e){return null;}}
 function lsSet(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}}
 
@@ -448,7 +459,7 @@ function finishTest(forced=false){
   if(pct>=80){cal="Aprobado \u2014 Excelente";color="#39e640";bg="rgba(57,230,64,.1)";border="rgba(57,230,64,.4)";}
   else if(pct>=60){cal="Aprobado";color="#ffaa00";bg="rgba(255,170,0,.1)";border="rgba(255,170,0,.4)";}
   else{cal="Desaprobado";color="#ff4444";bg="rgba(255,68,68,.1)";border="rgba(255,68,68,.4)";}
-  if(forced)cal="Desaprobado \u2014 Interrumpido";
+  if(forced){cal="Anulado \u2014 Abandon\u00f3 la pantalla";color="#ff4444";bg="rgba(255,68,68,.1)";border="rgba(255,68,68,.4)";}
   lsSet({status:"completed",nombre:userData.nombre,apellido:userData.apellido,score,total,pct,timeStr,cal,fecha:userData.fecha});
   window._rd={score,total,pct,timeStr,cal,color};
   document.getElementById("res-pct").textContent=pct+"%";
