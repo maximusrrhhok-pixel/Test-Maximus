@@ -107,6 +107,8 @@ input::placeholder{color:var(--gray-700)}
 .q-num{font-size:11px;color:var(--gray-700);margin-bottom:8px;font-weight:600;letter-spacing:.05em}
 .q-text{font-family:var(--font-cond);font-size:20px;font-weight:700;color:var(--white);line-height:1.4;margin-bottom:22px}
 .options{display:flex;flex-direction:column;gap:9px}
+.open-ans{width:100%;padding:12px 14px;background:var(--black-card);border:1px solid var(--black-line);border-radius:var(--r-sm);color:var(--white);font-family:var(--font);font-size:13px;line-height:1.6;resize:vertical;min-height:110px;outline:none;transition:border-color .2s;margin-top:4px;}
+.open-ans:focus{border-color:var(--green);}
 .option-label{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--black-soft);border:1px solid var(--black-muted);border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s,background .15s;}
 .option-label:hover{border-color:var(--green-dim);background:var(--green-glow)}
 .option-label.selected-opt{border-color:var(--green);background:var(--green-glow);box-shadow:0 0 0 1px rgba(0,206,0,.2)}
@@ -188,7 +190,7 @@ input::placeholder{color:var(--gray-700)}
       <p class="form-intro">Evaluación de conocimientos técnicos en hardware y marcas del rubro informático. <strong style="color:var(--white)">Solo puede realizarse una vez en este dispositivo.</strong></p>
       <div class="info-pills">
         <span class="pill"><strong>17</strong> preguntas</span>
-        <span class="pill"><strong>5 min</strong> límite</span>
+        <span class="pill"><strong>7 min</strong> límite</span>
         <span class="pill">Sin volver atrás</span>
         <span class="pill">Una sola vez</span>
       </div>
@@ -356,12 +358,16 @@ const QS=[
      MSI fabrica motherboards Y placas de video (GPU).
      Corsair hace gabinetes/fuentes. AMD: CPUs/GPUs. Samsung: memorias/monitores. */
   {cat:"marcas", tag:"Marcas",         q:"¿Qu\u00e9 marca es reconocida por fabricar tanto motherboards como placas de video (GPU)?", opts:["Corsair","AMD","Samsung","MSI"],ans:3},
+  {cat:"ram",    tag:"Memoria RAM",    q:"Un cliente adquiere un kit de RAM DDR4 3600\u00a0MHz, pero al encender el equipo el sistema reporta una velocidad de 2133\u00a0MHz. \u00bfCu\u00e1l es el motivo y qu\u00e9 pasos debe seguir para que la memoria opere a la frecuencia correcta?", open:true, ans:null},
+  {cat:"proc",   tag:"Procesadores",   q:"\u00bfCu\u00e1l de las siguientes opciones describe correctamente la diferencia entre Overclock y Undervolt?", opts:["Overclock: reducir la frecuencia del componente para bajar la temperatura. Undervolt: aumentar el voltaje para mayor estabilidad","Overclock: aumentar la frecuencia del componente por encima de los valores de f\u00e1brica para mayor rendimiento. Undervolt: reducir el voltaje de operaci\u00f3n para disminuir temperatura y consumo sin afectar el rendimiento","Overclock y Undervolt son dos t\u00e9rminos para el mismo proceso de optimizaci\u00f3n de hardware","Overclock: modificar el voltaje de operaci\u00f3n. Undervolt: modificar la frecuencia de reloj del componente"],ans:1},
+  {cat:"proc",   tag:"Procesadores",   q:"\u00bfQu\u00e9 es el thermal throttling, en qu\u00e9 situaciones ocurre y c\u00f3mo se soluciona?", open:true, ans:null},
+  {cat:"display",tag:"Monitores",      q:"Mencion\u00e1 los tres tipos principales de paneles utilizados en monitores de PC e indic\u00e1 una caracter\u00edstica destacada de cada uno.", open:true, ans:null},
 ];
 
 const CATS={proc:"Procesadores",storage:"Almacenamiento",display:"Monitores",video:"Placa de video",gral:"General",marcas:"Marcas"};
 const LETRAS=["A","B","C","D"];
 
-let userData={},curIdx=0,answers=[],timerSec=300,timerInt=null,startTime=null,testEnded=false,testState="idle";
+let userData={},curIdx=0,answers=[],timerSec=420,timerInt=null,startTime=null,testEnded=false,testState="idle";
 
 (function init(){
   document.getElementById("brand-logo").src = LOGO_B64;
@@ -400,7 +406,7 @@ function startTest(){
   document.getElementById("user-avatar").textContent=(nombre[0]||"").toUpperCase()+(apellido[0]||"").toUpperCase();
   document.getElementById("test-user-name").textContent=nombre+" "+apellido;
   show("screen-test");renderQ();
-  timerSec=300;updateTimer();timerInt=setInterval(tickTimer,1000);
+  timerSec=420;updateTimer();timerInt=setInterval(tickTimer,1000);
 }
 function tickTimer(){if(testState!=="running")return;timerSec--;updateTimer();if(timerSec<=0){clearInterval(timerInt);finishTest();}}
 function updateTimer(){
@@ -419,27 +425,36 @@ function renderQ(){
   document.getElementById("prog-fill").style.width=pct+"%";
   let html='<span class="q-tag tag-'+q.cat+'">'+q.tag+'</span>'
     +'<div class="q-num">Pregunta '+num+' de '+tot+'</div>'
-    +'<div class="q-text">'+q.q+'</div>'
-    +'<div class="options">';
-  LETRAS.forEach((l,i)=>{
-    const sel=answers[curIdx]===i;
-    html+='<label class="option-label'+(sel?" selected-opt":"")+'" id="opt-'+i+'" onclick="pick('+i+')">'
-      +'<input type="radio" name="opt" value="'+i+'"'+(sel?" checked":"")+'>'
-      +'<span class="opt-circle"><span class="opt-dot"></span></span>'
-      +'<span class="opt-letter">'+l+'.</span>'
-      +'<span class="opt-text">'+q.opts[i]+'</span></label>';
-  });
-  html+='</div>';
+    +'<div class="q-text">'+q.q+'</div>';
+  if(q.open){
+    const saved=answers[curIdx]||"";
+    html+='<div class="options"><textarea class="open-ans" rows="5" placeholder="Escribi tu respuesta aca..." oninput="pickOpen(this.value)">'+saved+'</textarea></div>';
+  } else {
+    html+='<div class="options">';
+    LETRAS.forEach((l,i)=>{
+      const sel=answers[curIdx]===i;
+      html+='<label class="option-label'+(sel?' selected-opt':'')+'" id="opt-'+i+'" onclick="pick('+i+')"'
+        +'><input type="radio" name="opt" value="'+i+'"'+(sel?' checked':'')+'>'
+        +'<span class="opt-circle"><span class="opt-dot"></span></span>'
+        +'<span class="opt-letter">'+l+'.</span>'
+        +'<span class="opt-text">'+q.opts[i]+'</span></label>';
+    });
+    html+='</div>';
+  }
   document.getElementById("q-card").innerHTML=html;
   const btn=document.getElementById("btn-next");
-  btn.disabled=answers[curIdx]===null;
+  btn.disabled=q.open?(answers[curIdx]||"").trim()==="":(answers[curIdx]===null);
   btn.textContent=curIdx===tot-1?"Ver resultados \u2192":"Siguiente \u2192";
-}
-function pick(i){
+}function pick(i){
   if(testState!=="running")return;
   answers[curIdx]=i;
   LETRAS.forEach((_,idx)=>{const l=document.getElementById("opt-"+idx);if(l)l.className="option-label"+(idx===i?" selected-opt":"");});
   document.getElementById("btn-next").disabled=false;
+}
+function pickOpen(val){
+  if(testState!=="running")return;
+  answers[curIdx]=val;
+  document.getElementById("btn-next").disabled=val.trim()==='';
 }
 function nextQuestion(){
   if(answers[curIdx]===null||testState!=="running")return;
